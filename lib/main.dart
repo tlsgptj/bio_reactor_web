@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const PieChartAndLineChart());
 }
 
@@ -14,16 +18,48 @@ class PieChartAndLineChart extends StatefulWidget {
 
 class PieChartAndLineChartState extends State<PieChartAndLineChart> {
   int touchedIndex = -1;
+  List<FlSpot> lineChartSpots = [];
+  double pieChartValue1 = 60;
+  double pieChartValue2 = 40;
+
+  @override
+  void initState() {
+    super.initState();
+    _activateListeners();
+  }
+
+  void _activateListeners() {
+    DatabaseReference lineChartRef = FirebaseDatabase.instance.ref('lineChart');
+    lineChartRef.onValue.listen((event) {
+      List<FlSpot> spots = [];
+      final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+      data.forEach((key, value) {
+        spots.add(FlSpot(double.parse(key), value.toDouble()));
+      });
+      setState(() {
+        lineChartSpots = spots;
+      });
+    });
+
+    DatabaseReference pieChartRef = FirebaseDatabase.instance.ref('pieChart');
+    pieChartRef.onValue.listen((event) {
+      final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+      setState(() {
+        pieChartValue1 = data['value1'].toDouble();
+        pieChartValue2 = data['value2'].toDouble();
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(title: Text('Pie Chart and Line Chart Sample')),
+        appBar: AppBar(title: Text('bioReactor')),
         body: Column(
           children: [
             Expanded(
-              flex: 3, // Adjust flex factor as needed
+              flex: 3,
               child: PieChart(
                 PieChartData(
                   pieTouchData: PieTouchData(
@@ -46,7 +82,7 @@ class PieChartAndLineChartState extends State<PieChartAndLineChart> {
               ),
             ),
             Expanded(
-              flex: 4, // Adjust flex factor as needed
+              flex: 4,
               child: LineChart(
                 LineChartData(
                   gridData: FlGridData(show: true),
@@ -93,15 +129,7 @@ class PieChartAndLineChartState extends State<PieChartAndLineChart> {
                   borderData: FlBorderData(show: true),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: [
-                        FlSpot(0, 1),
-                        FlSpot(1, 3),
-                        FlSpot(2, 2),
-                        FlSpot(3, 5),
-                        FlSpot(4, 3),
-                        FlSpot(5, 4),
-                        FlSpot(6, 2),
-                      ],
+                      spots: lineChartSpots,
                       isCurved: true,
                       color: Colors.blue,
                       barWidth: 4,
@@ -133,8 +161,8 @@ class PieChartAndLineChartState extends State<PieChartAndLineChart> {
         case 0:
           return PieChartSectionData(
             color: const Color(0xFF444974),
-            value: 60,
-            title: '6시간',
+            value: pieChartValue1,
+            title: '${pieChartValue1.toInt()}',
             radius: radius,
             titleStyle: TextStyle(
               fontSize: fontSize,
@@ -146,8 +174,8 @@ class PieChartAndLineChartState extends State<PieChartAndLineChart> {
         case 1:
           return PieChartSectionData(
             color: const Color(0xFFEAECFF),
-            value: 40,
-            title: "",
+            value: pieChartValue2,
+            title: '${pieChartValue2.toInt()}',
             radius: radius,
             titleStyle: TextStyle(
               fontSize: fontSize,
@@ -162,6 +190,8 @@ class PieChartAndLineChartState extends State<PieChartAndLineChart> {
     });
   }
 }
+
+
 
 
 
